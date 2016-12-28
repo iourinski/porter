@@ -1,4 +1,4 @@
-let test_set* = @[
+let testSetEN* = @[
   (key: "consign", value: "consign"),
   (key: "consigned", value: "consign"),
   (key: "consigning", value: "consign"),

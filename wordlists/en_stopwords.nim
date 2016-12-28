@@ -1,6 +1,4 @@
-import tables
-
-let regularStopwords = @["i","me","my","myself","we","our","ours","ourselves","you","your","yours","yourself","yourselves","he",
+let regularStopwordsEN = @["i","me","my","myself","we","our","ours","ourselves","you","your","yours","yourself","yourselves","he",
   "him","his","himself","she","her","hers","herself","it","its","itself","they","them","their","theirs","themselves","what","which",
   "who","whom","this","that","these","those","am","is","are","was","were","be","been","being","have","has","had","having","do","does",
   "did","doing","would","should","could","ought","i'm","you're","he's","she's","it's","we're","they're","i've","you've","we've",
@@ -12,10 +10,3 @@ let regularStopwords = @["i","me","my","myself","we","our","ours","ourselves","y
   "here","there","when","where","why","how","all","any","both","each","few","more","most","other","some","such","no","nor","not",
   "only","own","same","so","than","too","very"]
 
-proc getStopWords*: Table[string, bool] = 
-  result = initTable[string,bool]()
-  for word in regularStopwords:
-    result.add(word,true)
-  return  result
-
-proc getStopWordsList*: seq[string] = regularStopwords

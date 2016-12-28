@@ -1,14 +1,11 @@
-import 
-  re, 
-  tables, 
-  ../wordlists/en_stopwords,
-  ../wordlists/en_test
-
 ## this stemmer is mostly done to see whether the proposed "grammar" can be used to implement stemmers different from Russian,
 ## as a result this grammar almost passes the test from http://snowballstem.org/ although it certainly can be imporved and
 ## made more parsimonious 
+include 
+  ../wordlists/en_stopwords,
+  ../wordlists/en_test
 let 
-  en_rules* = {
+  rulesEN = {
     "Y": re"^(y)",
     "YY" : re"y",
     "VY" : re"(a|e|i|o|u)y",
@@ -76,7 +73,7 @@ let
     "YI": re"(y|Y)$"
    }.toTable
 
-  en_replacements* = {
+  replacementsEN = {
     "YI": "i",
     "SSES" : "ss",
     "IEDR1" : "i",
@@ -113,16 +110,12 @@ let
     "TT": "t"
   }.toTable
 
-proc getGrammarEN*(): string =
-  "INIT_APOSTROPHE,Y,?VY => YY,  POSS,  SSES, EED, ?IED1 => IEDR1, ?IED2 => IEDR2, " &
+  grammarEN: string =
+    "INIT_APOSTROPHE,Y,?VY => YY,  POSS,  SSES, EED, ?IED1 => IEDR1, ?IED2 => IEDR2, " &
     "?SEND => S, &RVRE, EED, EDCHECK => {?AT => +E,?DOUBLE => { !SHRTW => {BB,DD,FF,GG,MM,NN,PP,RR,TT}}, " &
     " %SHRTW => +E}, ?YEND => YI, TIONAL,ENCI,ANCI,ABLI,ENTLI,IZ,ATION,ALISM,FULNESS,OUSLI, " &
     " IVITY, BLI, OGI, LESSLI, ?L1CH => L1, ALIZE,IC, FUL,LESSLI,?LICH=>LI, "&
     " FUL,?ATIVECH=>ATIVE,?R2SUFF=>R2END, ?IONCH => ION, ?L1CH => L1 , ?E1CH => EDEL"
 
-proc getTestSetEN*(): seq[tuple[key: string, value: string]] = test_set
-
-proc getTestTextEN*(): string = "caps cries  luxurious apples lied posesses bums luxuriating hopped" &
+  testTextEN = "caps cries  luxurious apples lied posesses bums luxuriating hopped" &
     " delete if preceding longest finangles"
-
-proc stopWordsEN*(): Table[string, bool] = getStopWords()

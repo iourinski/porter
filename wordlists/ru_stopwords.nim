@@ -1,7 +1,7 @@
-import tables
+#import tables
 # notice that not all words here are actually russian words, this is collected statistically and reflects mostly the words
 # we do not want to see in stemmed text (thus some html tags, escape sequences and some english/german/spanish words )
-const regularStopwords = @["nbsp", "null", "quot", "и", "в", "во", "не", "что", "он", "на", "я", "с", "со", "как",    
+const regularStopwordsRU = @["nbsp", "null", "quot", "и", "в", "во", "не", "что", "он", "на", "я", "с", "со", "как",    
   "the", "to", "and", "com", "metadata", "http", "title", "а", "то", "все", "она",
   "you", "of", "for", "this", "at", "your", "in", "is", "will", "with", "that", "it", "description", "by",
   "der", "die", "und", "das", "von", "im", "des", "den", "ist", "eine", "dem", "di", "sich", "mit", "auf", "ber", "con",
@@ -30,11 +30,3 @@ const regularStopwords = @["nbsp", "null", "quot", "и", "в", "во", "не", "
   "самого", "самой", "самого", "самих", "самому", "самой", "самому", "самим", "самим", "самой", "самим", "самою",
   "самими", "самом", "самой", "самом", "самих", "быть", "бы", "буд", "быв", "есть", "суть", "име", "дел", "мог",
   "мож", "мочь", "уме", "хоч", "хот", "долж", "можн", "нужн", "нельзя"]
-
-proc getStopWords*: Table[string, bool] = 
-  result = initTable[string,bool]()
-  for word in regularStopwords:
-    result.add(word,true)
-  return  result
-
-proc getStopWordsList*: seq[string] = regularStopwords

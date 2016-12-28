@@ -1,12 +1,36 @@
 import 
+  macros,
   re, 
+  strutils, 
+  tables
+
+include
   rules/ru_porter,
-  rules/en_porter, 
-  tables, 
-  unicode
-  
+  rules/en_porter   
+
 # this is a helper package that only returns things related to each language, it needs to be changed whenever a new language is added
 # perhaps there is a nicer way to rewrite the whole thing using some metaprogramming rather than sequnces of cases
+#const langs = @["RU","EN"]
+#proc getReReprList(lang: string): table[string,Regex] = 
+#  case lang:
+#    of "RU":
+#      return ru_rules
+
+## these variables has to be edited if new rules etc are added
+type 
+  Dispatcher* = ref object of RootObj
+    languages*:  seq[string]
+    stopwords: Table[string, seq[string]]
+    stopMaps: Table[string, Table[string,bool]]
+    grammars: Table[string,  string]
+    grammarTokens: Table[string, seq[string]]
+    rules: Table[string,Table[string, Regex]]
+    replacements: Table[string, Table[string, string]]
+    testSets: Table[string, seq[tuple[key: string, value: string]]]
+    testTexts: Table[string, string]
+
+let
+  languages: seq[string] = @["RU","EN"]
 
 proc tokenize(grammar: string): seq[string] =
   result = newSeq[string]()
@@ -25,80 +49,87 @@ proc tokenize(grammar: string): seq[string] =
       result.add(ph)
   return result
 
-proc getReReplacement*(x: string, lang: string): string =
-  ## if new patterns in a grammar are introduced, they should be added here
-  case lang:
-    of "RU":
-      if ru_replacements.contains(x):
-        return ru_replacements[x]
-      else:
-        return ""
-    of "EN":
-      if en_replacements.contains(x):
-        return en_replacements[x]
-      else:
-        return ""
-    else:
-      return ""
+proc getTableMatch[T](reps: Table[string, T], x: string, dummy: T): T =
+  result = dummy
+  if reps.contains(x):
+    result =  reps[x]
   
-proc getRe*(x: string, lang: string): Regex =
-  ## if we can not find something, we just return regex that is VERY likely to do nothing
-  case lang:
-    of "RU":
-      if ru_rules.contains(x):
-        return ru_rules[x]
-      else:
-        return re".{100,}"
-    of "EN":
-      if en_rules.contains(x):
-        return en_rules[x]
-      else:
-        return re".{100,}"
-    else:
-      return re".{100,}"
-  
-proc getWordsMap*(lang: string = "RU"): Table[string, bool] = 
-  # this is a procedure that has to be changed when new languages are added (you also need to import your stemmer above)
-  case lang:
-    of "RU": 
-      return stopWordsRU()
-    of "EN":
-      return stopWordsEN()
-    else:
-      return initTable[string, bool]()
+proc makeMap(words: seq[string]): Table[string, bool] = 
+  result  = initTable[string,bool]()
+  for word in words:
+    result.add(word,true)
 
-proc getGrammarTokens*(lang: string = "RU"): seq[string] =  
-  # this is a procedure that has to be changed when new languages are added (you also need to import your stemmer above)
-  case lang:
-    of "RU":
-      return tokenize(getGrammarRU())
-    of "EN": 
-      return tokenize(getGrammarEN())
-    else:
-      return newSeq[string]()
+macro generateTable(tableName: static[string], varName: static[string], init: static[string], tempn: static[string]): stmt =
+  var source = "var "& tempn & " = " & init & "\n"  
+  for lang in languages:
+    source &= "if declared " & varname & lang & ": " & tempn & ".add(\"" & lang & "\"," & varName & lang & ")\n"
+  source &= "this." & tableName & "= " & tempn & "\n"
+  parseStmt(source)
+
+proc newDispatcher*(): Dispatcher = 
+  var this = Dispatcher(
+    languages: languages
+  )
+  include rules/ru_porter
+  generateTable("stopwords", "regularStopwords",  "initTable[string, seq[string]]()","tmp1")
+  generateTable("replacements", "replacements", "initTable[string, Table[string,string]]()", "tmp2")
+  generateTable("rules","rules","initTable[string,Table[string, Regex]]()","tmp3")
+  generateTable("grammars", "grammar", "initTable[string, string]()","tmp4")
+
+  var 
+    tmp5 = initTable[string, seq[string]]()
+    tmp6 = initTable[string,Table[string,bool]]()
+
+  for lang in languages:
+    if this.grammars.contains(lang):
+      tmp5.add(lang, tokenize(this.grammars[lang]))
+    if this.stopwords.contains(lang):
+      tmp6.add(lang, makeMap(this.stopwords[lang]))
+
+  this.grammarTokens = tmp5
+  this.stopMaps = tmp6
+  return this
+
+proc getReReplacement*(this: Dispatcher, x: string, lang: string): string =
+  result = ""
+  if this.replacements.contains(lang):
+    result = getTableMatch(this.replacements[lang], x, "")  
+
+proc getRe*(this: Dispatcher, x: string, lang: string): Regex =
+  ## if we can not find something, we just return regex that is VERY likely to do nothing
+  let dummy = re".{100,}"
+  result = dummy
+  if this.rules.contains(lang):
+    result =  getTableMatch(this.rules[lang], x, dummy)
   
-proc getTestSet*(lang: string): seq[tuple[key: string, value: string]] = 
+proc getStopwordsMap*(this: Dispatcher, lang: string = "RU"): Table[string, bool] = 
+  # this is a procedure that has to be changed when new languages are added (you also need to import your stemmer above)
+  result = initTable[string, bool]()
+  if this.stopMaps.contains(lang):
+    result = this.stopMaps[lang]
+
+proc getGrammarTokens*(this: Dispatcher, lang: string = "RU"): seq[string] =  
+  result = newSeq[string]()
+  if this.grammarTokens.contains(lang):
+    result =  this.grammarTokens[lang]
+
+proc getLanguages*(): seq[string] = languages
+
+# the two below are lazy variables, we only need them if we run tests, otherwise we just keep them undefined
+proc getTestSet*(this: Dispatcher, lang: string): seq[tuple[key: string, value: string]] = 
   # this is just to return a list of examples from Porter's webpage-- only useful to see how well your grammar 
   # reproduces the original algorithm
+  result =  newSeq[tuple[key: string, value: string]]()
+  if declared (this.testSets) == false:
+    generateTable("testSets", "testSet", "initTable[string, seq[tuple[key: string, value: string]]]()","tmp7")
+  if this.testSets.contains(lang):
+    result = this.testSets[lang]
 
-  case lang:
-    of "EN":
-      return getTestSetEN()
-    of "RU":
-      return getTestSetRU()
-    else: 
-      return newSeq[tuple[key: string, value: string]]()
+proc getTestText*(this: Dispatcher, lang: string): string = 
+  result = ""
+  if declared (this.testTexts) == false:
+    generateTable("testTexts", "testText", "initTable[string, string]()","tmp8")
+  if this.testTexts.contains(lang):
+    result = this.testTexts[lang]
 
-proc getTestText*(lang: string): string = 
-  case lang:
-    of "RU":
-      return getTestTextRU()
-    of "EN":
-      return getTestTextEN()
-    else:
-      return ""
-
-proc getLanguages*(): seq[string] = @["RU","EN"]
-
-
-
+    

@@ -1,4 +1,4 @@
-let test_set* = @[
+let testSetRU = @[
   (key: "в", value: "в"),
   (key: "вавиловка", value: "вавиловк"),
   (key: "вагнера", value: "вагнер"),

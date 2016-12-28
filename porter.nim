@@ -1,4 +1,5 @@
 import 
+  macros,
   mutableseqs,
   porter_dispatch,
   re,
@@ -6,7 +7,15 @@ import
   strutils,
   tables,
   unicode
-type PorterError* = object of Exception
+type 
+  PorterError* = object of Exception
+  Stemmer* = ref object of RootObj
+    dispatcher: Dispatcher 
+    cache*: Table[string,Table[string, string]]
+
+proc newStemmer*(): Stemmer =
+  Stemmer(dispatcher: newDispatcher(), cache: initTable[string, Table[string,string]]())
+
 proc substitute(word: var string, pat:  Regex, subst: string = ""): bool =
   ## does regex replacement and returns boolean value of whether the word stayed the same (false) or not (true)
   var tmp = word
@@ -24,7 +33,6 @@ proc splitText* (text: string): seq[string] =
   var lcw = ""
   for x in utf8(lcw1):
     lcw = lcw & x
-  
   var
     wordsF = lcw.split(re"\s+|,|\.|:|;|!|\?|\+|@") 
     words = wordsF
@@ -65,7 +73,7 @@ proc verifyGrammar(tokens: seq[string]): bool =
     raise  newException(PorterError,"check brackets balance")
   return true
       
-proc applyRules(tokens: seq[string], word: string, lang: string): string =
+proc applyRules(this: Stemmer, word: string, lang: string): string =
   ## this is a pretty simple linear parser-- no recursion, it only makes one pass through the tokens 
   ## and applies rules that match the word
   var 
@@ -75,14 +83,13 @@ proc applyRules(tokens: seq[string], word: string, lang: string): string =
     bracks = 0
     j = 0
   #echo word," beg: ", beginning," end: ",ending," no: ", j
-  
+  var tokens = this.dispatcher.getGrammarTokens(lang)
   while  j <= tokens.high:
     #echo j, " ",cond," ",tokens[j]," ",beginning, " ", ending
     if tokens[j].match(re"^\w+"):
       var 
-        regex = getRe(tokens[j], lang)
-        subst = getReReplacement(tokens[j], lang)
-      #echo "\t", tokens[j],"\t",subst
+        regex = this.dispatcher.getRe(tokens[j], lang)
+        subst = this.dispatcher.getReReplacement(tokens[j], lang)
       if j == 0:
         discard ending.substitute(regex, subst)
       else:
@@ -136,57 +143,52 @@ proc applyRules(tokens: seq[string], word: string, lang: string): string =
     inc(j)
   return beginning & ending
 
-proc stem* (text: seq[string], lang: string = "RU"): seq[string] = 
-  let 
-    grammar = getGrammarTokens(lang)
-    wordsMap  = getWordsMap(lang)
-  #echo grammar
+proc stem* (this: Stemmer, text: seq[string], lang: string = "RU"): seq[string] = 
   var 
     stemList = newSeq[string]()
-  
-  if verifyGrammar(grammar):
+  if verifyGrammar(this.dispatcher.getGrammarTokens(lang)):
     for word in text:
-      if wordsMap.contains(word) == false:
-        #stemList.add(word.applyRules()) this was version for non-universal Porter
-        stemList.add(unicode.toLower(grammar.applyRules(word, lang)))
+      if this.dispatcher.getStopwordsMap(lang).contains(word) == false:
+        stemList.add(unicode.toLower(this.applyRules(word, lang)))
   else:
     return text
   return stemList  
 
-proc stem* (text: string, lang: string = "RU"): seq[string] = 
+proc stem* (this: Stemmer, text: string, lang: string = "RU"): seq[string] = 
   var
     splitWords = splitText(text)  
-    stemList = stem(splitWords, lang)
+    stemList = this.stem(splitWords, lang)
   return stemList.filter(proc(x: string): bool = x.len > 1)
 
 ## some very simple testing procedures
-proc testWordSet(lang: string) = 
- for pair in getTestSet(lang):
-    var stemmmedWord = stem(pair.key, lang)
+proc testWordSet(this: Stemmer, lang: string) = 
+ for pair in this.dispatcher.getTestSet(lang):
+    var stemmmedWord = this.stem(pair.key, lang)
     if stemmmedWord.len > 0:
       try:
         assert pair.value == stemmmedWord[0]
       except:
         echo pair.key,": ",pair.value, " vs ", stemmmedWord[0]
 
-proc testText(lang: string) = 
-  var longString = getTestText(lang)
-  echo "original:\n",longString,"\nstemmed:\n",stem(longString,lang)
+proc testText(this: Stemmer, lang: string) = 
+  var longString = this.dispatcher.getTestText(lang)
+  echo "original:\n",longString,"\nstemmed:\n",this.stem(longString,lang)
 
-proc runTests(lang: string) = 
+proc runTests(this: Stemmer, lang: string) = 
   echo "Testing ", lang
   echo "Stemming a piece of text"
-  testText(lang)
+  this.testText(lang)
   echo ""
   echo "Testing a set of words:"
-  testWordSet(lang)
+  this.testWordSet(lang)
   echo "Testing words is finished, see discrepancies above"
 
-proc runTests() = 
+proc runTests(this: Stemmer) = 
   for lang in getLanguages():
-    runTests(lang)
+    this.runTests(lang)
     echo "---------"
 
 when isMainModule:
-  runTests()
+  var a = newStemmer()
+  a.runTests()
   
