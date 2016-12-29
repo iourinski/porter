@@ -1,22 +1,8 @@
-import 
-  macros,
-  re, 
-  strutils, 
-  tables
+import macros, os, re, tables
+# This is a helper package that builds stemming rules, reads wordlists etc.
+# Every instance of stemmer is capable of stemming in all languages defined in the package.
 
-include
-  rules/ru_porter,
-  rules/en_porter   
-
-# this is a helper package that only returns things related to each language, it needs to be changed whenever a new language is added
-# perhaps there is a nicer way to rewrite the whole thing using some metaprogramming rather than sequnces of cases
-#const langs = @["RU","EN"]
-#proc getReReprList(lang: string): table[string,Regex] = 
-#  case lang:
-#    of "RU":
-#      return ru_rules
-
-## these variables has to be edited if new rules etc are added
+include langlist
 type 
   Dispatcher* = ref object of RootObj
     languages*:  seq[string]
@@ -28,9 +14,6 @@ type
     replacements: Table[string, Table[string, string]]
     testSets: Table[string, seq[tuple[key: string, value: string]]]
     testTexts: Table[string, string]
-
-let
-  languages: seq[string] = @["RU","EN"]
 
 proc tokenize(grammar: string): seq[string] =
   result = newSeq[string]()
@@ -59,18 +42,25 @@ proc makeMap(words: seq[string]): Table[string, bool] =
   for word in words:
     result.add(word,true)
 
-macro generateTable(tableName: static[string], varName: static[string], init: static[string], tempn: static[string]): stmt =
+macro generateTable(
+  tableName: static[string], varName: static[string], init: static[string], tempn: static[string]
+  ): stmt =
   var source = "var "& tempn & " = " & init & "\n"  
   for lang in languages:
     source &= "if declared " & varname & lang & ": " & tempn & ".add(\"" & lang & "\"," & varName & lang & ")\n"
   source &= "this." & tableName & "= " & tempn & "\n"
   parseStmt(source)
 
+macro readIncls(dir: static[string]): stmt =
+  result = newNimNode(nnkStmtList)
+  for kind, path in walkDir(dir):
+    result.add(newNimNode(nnkIncludeStmt).add(newIdentNode(path)))
+    
 proc newDispatcher*(): Dispatcher = 
+  readIncls("rules")
   var this = Dispatcher(
     languages: languages
   )
-  include rules/ru_porter
   generateTable("stopwords", "regularStopwords",  "initTable[string, seq[string]]()","tmp1")
   generateTable("replacements", "replacements", "initTable[string, Table[string,string]]()", "tmp2")
   generateTable("rules","rules","initTable[string,Table[string, Regex]]()","tmp3")
@@ -103,7 +93,7 @@ proc getRe*(this: Dispatcher, x: string, lang: string): Regex =
     result =  getTableMatch(this.rules[lang], x, dummy)
   
 proc getStopwordsMap*(this: Dispatcher, lang: string = "RU"): Table[string, bool] = 
-  # this is a procedure that has to be changed when new languages are added (you also need to import your stemmer above)
+  ## returns a table that allows to check whether a word is in the list of stopwords for passed language.
   result = initTable[string, bool]()
   if this.stopMaps.contains(lang):
     result = this.stopMaps[lang]
@@ -119,6 +109,7 @@ proc getLanguages*(): seq[string] = languages
 proc getTestSet*(this: Dispatcher, lang: string): seq[tuple[key: string, value: string]] = 
   # this is just to return a list of examples from Porter's webpage-- only useful to see how well your grammar 
   # reproduces the original algorithm
+  readIncls("wordlists")
   result =  newSeq[tuple[key: string, value: string]]()
   if declared (this.testSets) == false:
     generateTable("testSets", "testSet", "initTable[string, seq[tuple[key: string, value: string]]]()","tmp7")
@@ -127,6 +118,7 @@ proc getTestSet*(this: Dispatcher, lang: string): seq[tuple[key: string, value: 
 
 proc getTestText*(this: Dispatcher, lang: string): string = 
   result = ""
+  readIncls("wordlists")
   if declared (this.testTexts) == false:
     generateTable("testTexts", "testText", "initTable[string, string]()","tmp8")
   if this.testTexts.contains(lang):

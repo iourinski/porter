@@ -1,5 +1,4 @@
 import 
-  macros,
   mutableseqs,
   porter_dispatch,
   re,
@@ -14,7 +13,8 @@ type
     cache*: Table[string,Table[string, string]]
 
 proc newStemmer*(): Stemmer =
-  Stemmer(dispatcher: newDispatcher(), cache: initTable[string, Table[string,string]]())
+  ## Constructor, does not require any parameters. Caching is not implemented yet.
+  Stemmer(dispatcher: newDispatcher(), cache: initTable[string, Table[string, string]]())
 
 proc substitute(word: var string, pat:  Regex, subst: string = ""): bool =
   ## does regex replacement and returns boolean value of whether the word stayed the same (false) or not (true)
@@ -23,11 +23,11 @@ proc substitute(word: var string, pat:  Regex, subst: string = ""): bool =
   return word != tmp
 
 proc trimEnds* (text: string): string = 
-  ## same about this one there are probably more things to trim
+  ## There are probably more things to trim, roughy similar to perl's chomp: removes trailing newlines and spaces
   text.replace(re"(^\s+|\s*\n$|\s$)","")
 
 proc splitText* (text: string): seq[string] =
-  ## this definitely should be expanded, so far it is a very basic text tokenization
+  ## This definitely should be expanded, so far it is a very basic text tokenization
   let 
     lcw1 = unicode.toLower(text).trimEnds
   var lcw = ""
@@ -49,7 +49,7 @@ proc splitText* (text: string): seq[string] =
   return unSplitWords.flatMap(proc(x: seq[string]): seq[string] = x)
 
 proc verifyGrammar(tokens: seq[string]): bool =
-  ## very simple check for passed sequence of tokens
+  ## Very simple check for passed sequence of tokens
   var brack = 0
   for i in 0 .. tokens.high:
     var token = tokens[i]
@@ -74,7 +74,7 @@ proc verifyGrammar(tokens: seq[string]): bool =
   return true
       
 proc applyRules(this: Stemmer, word: string, lang: string): string =
-  ## this is a pretty simple linear parser-- no recursion, it only makes one pass through the tokens 
+  ## This is a pretty simple linear parser-- no recursion, it only makes one pass through the tokens 
   ## and applies rules that match the word
   var 
     beginning = ""
@@ -82,7 +82,7 @@ proc applyRules(this: Stemmer, word: string, lang: string): string =
     cond = true
     bracks = 0
     j = 0
-  #echo word," beg: ", beginning," end: ",ending," no: ", j
+  #echo word, " beg: ", beginning, " end: ", ending, " no: ", j
   var tokens = this.dispatcher.getGrammarTokens(lang)
   while  j <= tokens.high:
     #echo j, " ",cond," ",tokens[j]," ",beginning, " ", ending
@@ -144,6 +144,8 @@ proc applyRules(this: Stemmer, word: string, lang: string): string =
   return beginning & ending
 
 proc stem* (this: Stemmer, text: seq[string], lang: string = "RU"): seq[string] = 
+  ## Replaces every element of sequence with corresponding stem, the words from 
+  ## stoplists are excluded.
   var 
     stemList = newSeq[string]()
   if verifyGrammar(this.dispatcher.getGrammarTokens(lang)):
@@ -155,6 +157,7 @@ proc stem* (this: Stemmer, text: seq[string], lang: string = "RU"): seq[string] 
   return stemList  
 
 proc stem* (this: Stemmer, text: string, lang: string = "RU"): seq[string] = 
+  ## Same as above, but the text is tokenized first
   var
     splitWords = splitText(text)  
     stemList = this.stem(splitWords, lang)
@@ -174,6 +177,10 @@ proc testText(this: Stemmer, lang: string) =
   var longString = this.dispatcher.getTestText(lang)
   echo "original:\n",longString,"\nstemmed:\n",this.stem(longString,lang)
 
+proc getLanguages* (this: Stemmer): seq[string] = 
+  ## Returns the list of languages available for stemming
+  return this.dispatcher.languages
+  
 proc runTests(this: Stemmer, lang: string) = 
   echo "Testing ", lang
   echo "Stemming a piece of text"
@@ -181,7 +188,7 @@ proc runTests(this: Stemmer, lang: string) =
   echo ""
   echo "Testing a set of words:"
   this.testWordSet(lang)
-  echo "Testing words is finished, see discrepancies above"
+  echo "Testing words is finished, see discrepancies above (our stems are on the right)"
 
 proc runTests(this: Stemmer) = 
   for lang in getLanguages():
@@ -191,4 +198,4 @@ proc runTests(this: Stemmer) =
 when isMainModule:
   var a = newStemmer()
   a.runTests()
-  
+  echo a.getLanguages()

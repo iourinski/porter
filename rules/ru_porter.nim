@@ -1,6 +1,4 @@
-include
-  ../wordlists/ru_stopwords,
-  ../wordlists/ru_test
+include ../wordlists/ru_stopwords
 ## this stemmer does not pass tests when compared to the stemming from http://snowballstem.org/ this is a deliberate decision
 ## we chose to remove some of word-forming suffixes, that we consider "grammatical" rather "semantical"
 ## suggestions about how the stemmer can be improved are, of course, welcome
@@ -14,7 +12,6 @@ include
   ## ?A => B, check is A matches, then replace B.
   ## Things separated by a comma are applied consequtively, all substitutions: NN = re"нн$" means "нн" at the end is removed etc.
   ## There is no grammar checking, yet-- balance your brackets etc!
-  
 let
   rulesRU = {
     "CL": re"(\')",
@@ -45,11 +42,6 @@ let
 
   grammarRU: string = 
     "{CL, YO, &RVRE, !REFLECTIVEGERUND => {REFLEXIVE, ADJECTIVE => {PARTICIPLE}, !VERB => NOUN}, I, ?DERIVATIONAL => DER, !P => {SUPERLATIVE, NN }}"
-
-  testTextRU: string = "трансцедентность Упячки бросилась в сильные фуфыри, петр крикнул  с крыши 'гласность'! " &
-    " Покачивая головой еле успевшая катя уснула невзирая на неприспособленность. " &
-    "Падающий на вальдшнепа пакет с операми вагнера заснял глянувший сверху делавший глупости стерх из cccp." &
-    "Туповатый ёжик так ничего и не понял"
 
 # these two functions are a bit of "legacy": direct application of Porter algorithm for Russian language
 proc substitute(word: var string, pat:  Regex, subst: string = ""): bool =

@@ -2,8 +2,7 @@
 ## as a result this grammar almost passes the test from http://snowballstem.org/ although it certainly can be imporved and
 ## made more parsimonious 
 include 
-  ../wordlists/en_stopwords,
-  ../wordlists/en_test
+  ../wordlists/en_stopwords
 let 
   rulesEN = {
     "Y": re"^(y)",
@@ -116,6 +115,3 @@ let
     " %SHRTW => +E}, ?YEND => YI, TIONAL,ENCI,ANCI,ABLI,ENTLI,IZ,ATION,ALISM,FULNESS,OUSLI, " &
     " IVITY, BLI, OGI, LESSLI, ?L1CH => L1, ALIZE,IC, FUL,LESSLI,?LICH=>LI, "&
     " FUL,?ATIVECH=>ATIVE,?R2SUFF=>R2END, ?IONCH => ION, ?L1CH => L1 , ?E1CH => EDEL"
-
-  testTextEN = "caps cries  luxurious apples lied posesses bums luxuriating hopped" &
-    " delete if preceding longest finangles"

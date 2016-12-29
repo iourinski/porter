@@ -1,0 +1,4 @@
+const languages = @[
+  "RU",
+  "EN"
+]
