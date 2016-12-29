@@ -1,4 +1,3 @@
-include ../wordlists/ru_stopwords
 ## this stemmer does not pass tests when compared to the stemming from http://snowballstem.org/ this is a deliberate decision
 ## we chose to remove some of word-forming suffixes, that we consider "grammatical" rather "semantical"
 ## suggestions about how the stemmer can be improved are, of course, welcome

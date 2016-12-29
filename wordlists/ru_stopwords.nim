@@ -1,7 +1,7 @@
 #import tables
 # notice that not all words here are actually russian words, this is collected statistically and reflects mostly the words
 # we do not want to see in stemmed text (thus some html tags, escape sequences and some english/german/spanish words )
-const regularStopwordsRU = @["nbsp", "null", "quot", "и", "в", "во", "не", "что", "он", "на", "я", "с", "со", "как",    
+let regularStopwordsRU = @["nbsp", "null", "quot", "и", "в", "во", "не", "что", "он", "на", "я", "с", "со", "как",    
   "the", "to", "and", "com", "metadata", "http", "title", "а", "то", "все", "она",
   "you", "of", "for", "this", "at", "your", "in", "is", "will", "with", "that", "it", "description", "by",
   "der", "die", "und", "das", "von", "im", "des", "den", "ist", "eine", "dem", "di", "sich", "mit", "auf", "ber", "con",

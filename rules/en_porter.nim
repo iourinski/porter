@@ -1,8 +1,6 @@
 ## this stemmer is mostly done to see whether the proposed "grammar" can be used to implement stemmers different from Russian,
 ## as a result this grammar almost passes the test from http://snowballstem.org/ although it certainly can be imporved and
 ## made more parsimonious 
-include 
-  ../wordlists/en_stopwords
 let 
   rulesEN = {
     "Y": re"^(y)",

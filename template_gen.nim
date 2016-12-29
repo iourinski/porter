@@ -1,6 +1,6 @@
 import os, strutils
 type   GeneratorError* = object of Exception
-include langlist, templates/comments
+include includes/langlist, templates/comments
 var lang = ""
 
  ## this is a comment
@@ -13,7 +13,6 @@ proc makeRulesTempl(langPrefix, langSuffix: string) =
   var source  = ""
   let
     opers = @[
-      "include ../wordlists/" & langPrefix & "stopwords",
       rules_comment,
       "let",
       "  rules" & langSuffix & " = { \"NAME\" : re\"regex\" }.toTable",
@@ -36,18 +35,34 @@ proc makeWordLists(langPrefix, langSuffix: string) =
       "  testText" & langSuffix & " = \"\" "
     ]
   writeFile("wordlists/" & langPrefix & "stopwords.nim", generateText(stopwords))
-  writeFile("wordlists/" & langPrefix & "test.nim", generateText(tests))
+  writeFile("tests/" & langPrefix & "test.nim", generateText(tests))
 
 proc updateLangList(lang: string) =
   var 
     newList = newSeq[string]()
-    source = "const languages = @[\n" 
+    source = "const languages = @[\n"
+    wordlists = ""
+    rules = ""
+    tests = "" 
   for idx in 0 .. languages.high:
-    var language = languages[idx]
+    var 
+      language = languages[idx]
+      langPrefix = language.toLower
     source &= "  \"" & language & "\",\n"
-    
+    wordlists &= "include ../wordlists/" & langPrefix & "_stopwords.nim\n"
+    rules &= "include ../rules/" & langPrefix & "_porter.nim\n"
+    tests &= "include ../tests/" & langPrefix & "_test.nim\n"
+  
+  wordlists &= "include ../wordlists/" & lang.toLower & "_stopwords.nim\n"
+  rules &= "include ../rules/" & lang.toLower & "_porter.nim\n"
+  tests &= "include ../tests/" & lang.toLower & "_test.nim\n"    
   source &= "  \"" & lang & "\"\n]\n"
-  writeFile("langlist.nim", source)
+
+  writeFile("includes/langlist.nim", source)
+  writeFile("includes/tests.nim", tests)
+  writeFile("includes/wordlists.nim", wordlists)
+  writeFile("includes/rules.nim", rules)
+
 
 when isMainModule:
   try:

@@ -2,7 +2,7 @@ import macros, os, re, tables
 # This is a helper package that builds stemming rules, reads wordlists etc.
 # Every instance of stemmer is capable of stemming in all languages defined in the package.
 
-include langlist
+include includes/langlist
 type 
   Dispatcher* = ref object of RootObj
     languages*:  seq[string]
@@ -57,7 +57,10 @@ macro readIncls(dir: static[string]): stmt =
     result.add(newNimNode(nnkIncludeStmt).add(newIdentNode(path)))
     
 proc newDispatcher*(): Dispatcher = 
-  readIncls("rules")
+  #readIncls("rules")
+  #readIncls("wordlists")
+  include includes/rules, includes/wordlists
+
   var this = Dispatcher(
     languages: languages
   )
@@ -109,7 +112,8 @@ proc getLanguages*(): seq[string] = languages
 proc getTestSet*(this: Dispatcher, lang: string): seq[tuple[key: string, value: string]] = 
   # this is just to return a list of examples from Porter's webpage-- only useful to see how well your grammar 
   # reproduces the original algorithm
-  readIncls("wordlists")
+  #readIncls("tests")
+  include includes/tests
   result =  newSeq[tuple[key: string, value: string]]()
   if declared (this.testSets) == false:
     generateTable("testSets", "testSet", "initTable[string, seq[tuple[key: string, value: string]]]()","tmp7")
@@ -118,7 +122,8 @@ proc getTestSet*(this: Dispatcher, lang: string): seq[tuple[key: string, value: 
 
 proc getTestText*(this: Dispatcher, lang: string): string = 
   result = ""
-  readIncls("wordlists")
+  #readIncls("tests")
+  include includes/tests
   if declared (this.testTexts) == false:
     generateTable("testTexts", "testText", "initTable[string, string]()","tmp8")
   if this.testTexts.contains(lang):
