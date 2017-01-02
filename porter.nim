@@ -7,7 +7,7 @@ import
   tables,
   unicode
 type 
-  PorterError* = object of Exception
+ 
   Stemmer* = ref object of RootObj
     dispatcher: Dispatcher 
     cache*: Table[string,Table[string, string]]
@@ -24,17 +24,21 @@ proc substitute(word: var string, pat:  Regex, subst: string = ""): bool =
 
 proc trimEnds* (text: string): string = 
   ## There are probably more things to trim, roughy similar to perl's chomp: removes trailing newlines and spaces
-  text.replace(re"(^\s+|\s*\n$|\s$)","")
-
+  text.replace(re"(\)|\(^\s+|\s*\n$|\s$)","")
+  #text.replace(re"[^-а-яa-z0-9]","")
 proc splitText* (text: string): seq[string] =
   ## This definitely should be expanded, so far it is a very basic text tokenization
-  let 
+  var 
     lcw1 = unicode.toLower(text).trimEnds
+
   var lcw = ""
   for x in utf8(lcw1):
-    lcw = lcw & x
+    if x != "\"" and x != "\'":
+      lcw = lcw & x
+  #lcw = lcw.replace(re"[^а-яa-z0-9]","")
+  
   var
-    wordsF = lcw.split(re"\s+|,|\.|:|;|!|\?|\+|@") 
+    wordsF = lcw.split(re"\-|\s+|,|\.|:|;|!|\?|\+|@") 
     words = wordsF
     .filter(proc(x: string): bool = x.match(re"^[-0-9]+$") == false)
   var 
@@ -48,30 +52,7 @@ proc splitText* (text: string): seq[string] =
       )
   return unSplitWords.flatMap(proc(x: seq[string]): seq[string] = x)
 
-proc verifyGrammar(tokens: seq[string]): bool =
-  ## Very simple check for passed sequence of tokens
-  var brack = 0
-  for i in 0 .. tokens.high:
-    var token = tokens[i]
-    #echo i," ",token
-    if i == 0:
-      if token.match(re"^[A-Za-z\&\{\!\?\+\%]") == false:
-        raise  newException(PorterError,"can't have " & token & " at the beginning")
-    if token == ",":
-      if tokens[i - 1].match(re"\}|\w+"):
-        if (i < tokens.high and tokens[i+1].match(re"\%|\&|\?|\!|\w+")) == false:
-          raise  newException(PorterError,"can't have " & tokens[i+1] & token & tokens[i+1])
-    if token == "{":
-      inc(brack)
-    
-    if token == "}":
-      brack = brack - 1
-      if i < tokens.high:       
-        if tokens[i+1].match(re"\,|\}") == false:
-          raise  newException(PorterError,"can't have " &  token & tokens[i+1])
-  if brack != 0:
-    raise  newException(PorterError,"check brackets balance")
-  return true
+
       
 proc applyRules(this: Stemmer, word: string, lang: string): string =
   ## This is a pretty simple linear parser-- no recursion, it only makes one pass through the tokens 
@@ -148,12 +129,18 @@ proc stem* (this: Stemmer, text: seq[string], lang: string = "RU"): seq[string] 
   ## stoplists are excluded.
   var 
     stemList = newSeq[string]()
-  if verifyGrammar(this.dispatcher.getGrammarTokens(lang)):
-    for word in text:
-      if this.dispatcher.getStopwordsMap(lang).contains(word) == false:
-        stemList.add(unicode.toLower(this.applyRules(word, lang)))
-  else:
-    return text
+  #if verifyGrammar(this.dispatcher.getGrammarTokens(lang)):
+  for word in text:
+    if this.dispatcher.getStopwordsMap(lang).contains(word) == false:
+      if this.cache.contains(lang):
+        if this.cache[lang].contains(word):
+          stemList.add(this.cache[lang][word])
+        else:
+          var stem = unicode.toLower(this.applyRules(word, lang))
+          stemList.add(stem)
+          this.cache[lang].add(unicode.toLower(word), stem)
+  #else:
+    #return text
   return stemList  
 
 proc stem* (this: Stemmer, text: string, lang: string = "RU"): seq[string] = 

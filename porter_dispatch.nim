@@ -14,6 +14,32 @@ type
     replacements: Table[string, Table[string, string]]
     testSets: Table[string, seq[tuple[key: string, value: string]]]
     testTexts: Table[string, string]
+  PorterError* = object of Exception
+
+proc verifyGrammar(tokens: seq[string]): bool =
+  ## Very simple check for passed sequence of tokens
+  var brack = 0
+  for i in 0 .. tokens.high:
+    var token = tokens[i]
+    #echo i," ",token
+    if i == 0:
+      if token.match(re"^[A-Za-z\&\{\!\?\+\%]") == false:
+        raise  newException(PorterError,"can't have " & token & " at the beginning")
+    if token == ",":
+      if tokens[i - 1].match(re"\}|\w+"):
+        if (i < tokens.high and tokens[i+1].match(re"\%|\&|\?|\!|\w+")) == false:
+          raise  newException(PorterError,"can't have " & tokens[i+1] & token & tokens[i+1])
+    if token == "{":
+      inc(brack)
+    
+    if token == "}":
+      brack = brack - 1
+      if i < tokens.high:       
+        if tokens[i+1].match(re"\,|\}") == false:
+          raise  newException(PorterError,"can't have " &  token & tokens[i+1])
+  if brack != 0:
+    raise  newException(PorterError,"check brackets balance")
+  return true
 
 proc tokenize(grammar: string): seq[string] =
   result = newSeq[string]()
@@ -75,7 +101,9 @@ proc newDispatcher*(): Dispatcher =
 
   for lang in languages:
     if this.grammars.contains(lang):
-      tmp5.add(lang, tokenize(this.grammars[lang]))
+      var tokens = tokenize(this.grammars[lang])
+      if verifyGrammar(tokens):
+        tmp5.add(lang, tokens)
     if this.stopwords.contains(lang):
       tmp6.add(lang, makeMap(this.stopwords[lang]))
 
