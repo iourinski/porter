@@ -129,18 +129,22 @@ proc stem* (this: Stemmer, text: seq[string], lang: string = "RU"): seq[string] 
   ## stoplists are excluded.
   var 
     stemList = newSeq[string]()
-  #if verifyGrammar(this.dispatcher.getGrammarTokens(lang)):
   for word in text:
-    if this.dispatcher.getStopwordsMap(lang).contains(word) == false:
+    let lcw = unicode.toLower(word)
+    if this.dispatcher.getStopwordsMap(lang).contains(lcw) == false:
       if this.cache.contains(lang):
-        if this.cache[lang].contains(word):
-          stemList.add(this.cache[lang][word])
+        if this.cache[lang].contains(lcw):
+          stemList.add(this.cache[lang][lcw])
         else:
-          var stem = unicode.toLower(this.applyRules(word, lang))
+          var stem = this.applyRules(lcw, lang)
           stemList.add(stem)
-          this.cache[lang].add(unicode.toLower(word), stem)
-  #else:
-    #return text
+          this.cache[lang].add(lcw, stem)
+      else:
+        let stem = this.applyRules(lcw,lang)
+        var dummyTable = initTable[string, string]()
+        dummyTable.add(lcw, stem)
+        this.cache.add(lang, dummyTable)
+        stemList.add(stem)
   return stemList  
 
 proc stem* (this: Stemmer, text: string, lang: string = "RU"): seq[string] = 
