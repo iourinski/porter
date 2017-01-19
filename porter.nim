@@ -13,8 +13,12 @@ type
     cache*: Table[string,Table[string, string]]
 
 proc newStemmer*(): Stemmer =
-  ## Constructor, does not require any parameters. Caching is not implemented yet.
-  Stemmer(dispatcher: newDispatcher(), cache: initTable[string, Table[string, string]]())
+  ## Constructor, does not require any parameters.
+  return Stemmer(dispatcher: newDispatcher(), cache: initTable[string, Table[string, string]]())
+  
+proc newStemmer*(lang: string): Stemmer = 
+  ## Only constructs stemmer working with specified language 
+  return Stemmer(dispatcher: newDispatcher(lang), cache: initTable[string, Table[string, string]]())
 
 proc substitute(word: var string, pat:  Regex, subst: string = ""): bool =
   ## does regex replacement and returns boolean value of whether the word stayed the same (false) or not (true)
@@ -190,3 +194,5 @@ when isMainModule:
   var a = newStemmer()
   a.runTests()
   echo a.getLanguages()
+  var b = newStemmer("EN")
+  echo b.dispatcher.getGrammarTokens("EN")

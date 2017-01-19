@@ -111,6 +111,36 @@ proc newDispatcher*(): Dispatcher =
   this.stopMaps = tmp6
   return this
 
+proc newDispatcher*(lang: string): Dispatcher = 
+  #readIncls("rules")
+  #readIncls("wordlists")
+  include includes/rules, includes/wordlists
+
+  var this = Dispatcher(
+    languages: languages
+  )
+  generateTable("stopwords", "regularStopwords",  "initTable[string, seq[string]]()","tmp1")
+  generateTable("replacements", "replacements", "initTable[string, Table[string,string]]()", "tmp2")
+  generateTable("rules","rules","initTable[string,Table[string, Regex]]()","tmp3")
+  generateTable("grammars", "grammar", "initTable[string, string]()","tmp4")
+
+  var 
+    tmp5 = initTable[string, seq[string]]()
+    tmp6 = initTable[string,Table[string,bool]]()
+
+  for langLocal in languages:
+    if lang == langLocal:  
+      if this.grammars.contains(lang):
+        var tokens = tokenize(this.grammars[lang])
+        if verifyGrammar(tokens):
+          tmp5.add(lang, tokens)
+        if this.stopwords.contains(lang):
+          tmp6.add(lang, makeMap(this.stopwords[lang]))
+
+  this.grammarTokens = tmp5
+  this.stopMaps = tmp6
+  return this
+
 proc getReReplacement*(this: Dispatcher, x: string, lang: string): string =
   result = ""
   if this.replacements.contains(lang):
