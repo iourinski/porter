@@ -139,6 +139,11 @@ proc newDispatcher*(lang: string): Dispatcher =
 
   this.grammarTokens = tmp5
   this.stopMaps = tmp6
+  for gr in this.grammars.keys:
+    if lang != gr:
+      this.grammars.del(gr)
+      this.replacements.del(gr)
+      this.rules.del(gr)
   return this
 
 proc getReReplacement*(this: Dispatcher, x: string, lang: string): string =
@@ -165,6 +170,10 @@ proc getGrammarTokens*(this: Dispatcher, lang: string = "RU"): seq[string] =
     result =  this.grammarTokens[lang]
 
 proc getLanguages*(): seq[string] = languages
+proc getAvailableLanguages*(this: Dispatcher): seq[string] =
+  result = newSeq[string]()
+  for lang in this.grammars.keys:
+    result.add(lang)
 
 # the two below are lazy variables, we only need them if we run tests, otherwise we just keep them undefined
 proc getTestSet*(this: Dispatcher, lang: string): seq[tuple[key: string, value: string]] = 

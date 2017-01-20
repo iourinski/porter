@@ -128,7 +128,7 @@ proc applyRules(this: Stemmer, word: string, lang: string): string =
     inc(j)
   return beginning & ending
 
-proc stem* (this: Stemmer, text: seq[string], lang: string = "RU"): seq[string] = 
+proc stem* (this: Stemmer, text: seq[string], lang: string): seq[string] = 
   ## Replaces every element of sequence with corresponding stem, the words from 
   ## stoplists are excluded.
   var 
@@ -151,11 +151,24 @@ proc stem* (this: Stemmer, text: seq[string], lang: string = "RU"): seq[string] 
         stemList.add(stem)
   return stemList  
 
-proc stem* (this: Stemmer, text: string, lang: string = "RU"): seq[string] = 
+proc stem* (this: Stemmer, text: string, lang: string): seq[string] = 
   ## Same as above, but the text is tokenized first
   var
     splitWords = splitText(text)  
     stemList = this.stem(splitWords, lang)
+  return stemList.filter(proc(x: string): bool = x.len > 1)
+
+proc stem* (this: Stemmer, text: seq[string]): seq[string] = 
+  ## if only one language is available, will stem in it, o/wise returns original text
+  let langs =  this.dispatcher.getAvailableLanguages
+  if langs.len == 1:
+    return this.stem(text,langs[0])
+  return 
+
+proc stem* (this: Stemmer, text: string): seq[string] =
+  var
+    splitWords = splitText(text)  
+    stemList = this.stem(splitWords)
   return stemList.filter(proc(x: string): bool = x.len > 1)
 
 ## some very simple testing procedures
@@ -186,7 +199,7 @@ proc runTests(this: Stemmer, lang: string) =
   echo "Testing words is finished, see discrepancies above (our stems are on the right)"
 
 proc runTests(this: Stemmer) = 
-  for lang in getLanguages():
+  for lang in this.dispatcher.getAvailableLanguages():
     this.runTests(lang)
     echo "---------"
 
@@ -195,4 +208,6 @@ when isMainModule:
   a.runTests()
   echo a.getLanguages()
   var b = newStemmer("EN")
-  echo b.dispatcher.getGrammarTokens("EN")
+  echo b.dispatcher.getGrammarTokens("RU")
+  b.runTests()
+  echo b.dispatcher.getAvailableLanguages
